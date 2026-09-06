@@ -2,8 +2,8 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { IsPhoneNumber, IsString, Length } from 'class-validator';
 import { AuthService } from './auth.service';
 
-class RequestOtpDto { @IsPhoneNumber() phone: string; }
-class VerifyOtpDto { @IsPhoneNumber() phone: string; @IsString() @Length(6, 6) code: string; }
+class RequestOtpDto { @IsPhoneNumber('CM') phone: string; }
+class VerifyOtpDto { @IsPhoneNumber('CM') phone: string; @IsString() @Length(6, 6) code: string; }
 
 @Controller('auth/otp')
 export class AuthController {
@@ -18,4 +18,4 @@ export class AuthController {
   verify(@Body() dto: VerifyOtpDto) {
     return this.auth.verifyOtp(dto.phone, dto.code);
   }
-}
+  }
