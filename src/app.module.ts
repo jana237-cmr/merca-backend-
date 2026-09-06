@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import { WalletModule } from './wallet/wallet.module';
 import { OrdersModule } from './orders/orders.module';
 import { ProductsModule } from './products/products.module';
@@ -29,6 +30,7 @@ import { ReviewsModule } from './reviews/reviews.module';
       namingStrategy: new SnakeNamingStrategy(),
     }),
     AuthModule,
+    UsersModule,
     WalletModule,
     OrdersModule,
     ProductsModule,
