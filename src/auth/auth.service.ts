@@ -3,6 +3,8 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/user.entity';
+import { Wallet } from '../wallet/wallet.entity';
+import { WalletTransaction } from '../wallet/wallet-transaction.entity';
 
 // Stockage temporaire des codes OTP (code à usage unique envoyé par SMS).
 // TODO PRODUCTION : remplacer cette Map en mémoire par Redis, sinon les
@@ -14,6 +16,8 @@ const otpStore = new Map<string, { code: string; expiresAt: number; attempts: nu
 export class AuthService {
   constructor(
     @InjectRepository(User) private users: Repository<User>,
+    @InjectRepository(Wallet) private wallets: Repository<Wallet>,
+    @InjectRepository(WalletTransaction) private walletTx: Repository<WalletTransaction>,
     private jwt: JwtService,
   ) {}
 
@@ -45,6 +49,21 @@ export class AuthService {
     if (!user) {
       user = this.users.create({ phone, roles: ['client'] });
       await this.users.save(user);
+
+      // Nouveau compte : on crée son portefeuille (wallet) tout de suite,
+      // sinon le premier appel à GET /wallet échouerait ("introuvable").
+      // BONUS_TEST = simulation, pas un vrai versement bancaire.
+      const BONUS_TEST = 25000;
+      const wallet = this.wallets.create({ userId: user.id, balance: BONUS_TEST });
+      await this.wallets.save(wallet);
+      await this.walletTx.save(
+        this.walletTx.create({
+          walletId: wallet.id,
+          amount: BONUS_TEST,
+          type: 'topup',
+          txId: `signup-${user.id}`,
+        }),
+      );
     }
 
     // JWT (JSON Web Token) = jeton signé prouvant l'identité de l'utilisateur
