@@ -15,20 +15,12 @@ import { SearchLogsModule } from './search-logs/search-logs.module';
 
 @Module({
   imports: [
-    // ConfigModule = lit les variables d'environnement (.env) comme le mot de
-    // passe de la base de données, sans les écrire en clair dans le code
     ConfigModule.forRoot({ isGlobal: true }),
-    // TypeOrmModule = connecte le serveur à la base de données PostgreSQL et
-    // décrit chaque "table" (entity) sous forme de classe TypeScript
     TypeOrmModule.forRoot({
       type: 'postgres',
       url: process.env.DATABASE_URL,
       autoLoadEntities: true,
-      synchronize: process.env.NODE_ENV !== 'production', // en production, utiliser les migrations SQL du dossier /migrations à la place
-      // IMPORTANT (bug corrigé) : sans ceci, TypeORM nomme les colonnes en
-      // camelCase (ex: merchantId) alors que migrations/001_init.sql utilise
-      // le snake_case (ex: merchant_id) — les deux ne correspondaient pas.
-      // Cette stratégie force les entités à utiliser le même style que le SQL.
+      synchronize: process.env.NODE_ENV !== 'production',
       namingStrategy: new SnakeNamingStrategy(),
     }),
     AuthModule,
@@ -41,11 +33,6 @@ import { SearchLogsModule } from './search-logs/search-logs.module';
     ReviewsModule,
     RatingsModule,
     SearchLogsModule,
-  ],
-})
-export class AppModule {}    ServicesModule,
-    BookingsModule,
-    ReviewsModule,
   ],
 })
 export class AppModule {}
