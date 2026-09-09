@@ -8,6 +8,17 @@ export class User {
   @Column({ nullable: true }) name: string;
   @Column({ nullable: true }) city: string;
 
+  // Coordonnées GPS du compte (position du commerçant/employé pro pour la
+  // recherche par proximité). Remplies automatiquement via le GPS du téléphone,
+  // ou calculées à partir de addressText si l'utilisateur tape son adresse
+  // manuellement (voir GeocodingService).
+  @Column('double precision', { nullable: true }) latitude: number;
+  @Column('double precision', { nullable: true }) longitude: number;
+
+  // Adresse tapée manuellement quand le GPS n'est pas utilisé (ex: "Yaoundé,
+  // Bastos, rue 1.234"). Sert aussi à réafficher l'adresse à l'utilisateur.
+  @Column({ nullable: true }) addressText: string;
+
   // Rôles actifs du compte : toujours au moins ['client'], peut contenir
   // aussi 'commercant', 'livreur', 'pro'
   @Column('text', { array: true, default: ['client'] }) roles: string[];
@@ -30,4 +41,4 @@ export class User {
   @Column({ nullable: true }) pushToken: string;
 
   @CreateDateColumn() createdAt: Date;
-}
+                   }
