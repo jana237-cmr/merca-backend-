@@ -8,6 +8,7 @@ import { User } from './user.entity';
 class UpdateProfileDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() city?: string;
+  @IsOptional() @IsString() pushToken?: string;
 }
 
 class AddRoleDto {

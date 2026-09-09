@@ -23,5 +23,11 @@ export class User {
   // vérificateur humain ou un service tiers spécialisé.
   @Column('text', { array: true, default: [] }) verifiedRoles: string[];
 
+  // Jeton de notification push (Expo Push Token) - permet d'envoyer une vraie
+  // notification au téléphone de l'utilisateur, même app fermée. Ne fonctionne
+  // que sur une vraie app installée (pas dans Expo Go) - sera rempli automatiquement
+  // une fois l'app construite en version finale.
+  @Column({ nullable: true }) pushToken: string;
+
   @CreateDateColumn() createdAt: Date;
 }
