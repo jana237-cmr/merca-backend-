@@ -12,7 +12,7 @@ const RULES = {
   SPLIT_LIVREUR: 600,
   SPLIT_MARCHAND: 450,
   SPLIT_MERCA: 450,
-  BLOQUE_JOURS: 33,
+  BLOQUE_JOURS: 50,
 };
 
 @Injectable()
@@ -100,5 +100,20 @@ export class OrdersService {
     order.status = 'Confirmée';
     order.step = 4;
     return this.orders.save(order);
+  }
+
+  // ---- Listes de commandes, selon qui regarde ----
+  listMine(buyerId: string) {
+    return this.orders.find({ where: { buyerId }, order: { createdAt: 'DESC' } });
+  }
+  listToFulfill(merchantId: string) {
+    return this.orders.find({ where: { merchantId }, order: { createdAt: 'DESC' } });
+  }
+  // Commandes prêtes à être prises en charge par n'importe quel livreur (étape 2)
+  listAvailableForCourier() {
+    return this.orders.find({ where: { step: 2 }, order: { createdAt: 'DESC' } });
+  }
+  listMyDeliveries(courierId: string) {
+    return this.orders.find({ where: { courierId }, order: { createdAt: 'DESC' } });
   }
 }
