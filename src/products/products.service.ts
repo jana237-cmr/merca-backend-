@@ -8,7 +8,7 @@ import { Roles, RolesGuard } from '../auth/roles.guard';
 
 const BLOQUE_JOURS = 50;
 
-class CreateProductDto { @IsString() name: string; @IsNumber() @Min(1) price: number; @IsNumber() @Min(0) stock: number; @IsOptional() @IsString() category?: string; @IsOptional() @IsString() city?: string; @IsOptional() @IsString() desc?: string; @IsOptional() @IsString() img?: string; @IsOptional() @IsString() shopName?: string; }
+class CreateProductDto { @IsString() name: string; @IsNumber() @Min(1) price: number; @IsNumber() @Min(0) stock: number; @IsOptional() @IsString() category?: string; @IsOptional() @IsString() city?: string; @IsOptional() @IsString() description?: string; @IsOptional() @IsString() img?: string; @IsOptional() @IsString() shopName?: string; }
 class UpdateProductDto { @IsOptional() @IsNumber() @Min(1) price?: number; @IsOptional() @IsNumber() @Min(0) stock?: number; }
 
 @Injectable()
