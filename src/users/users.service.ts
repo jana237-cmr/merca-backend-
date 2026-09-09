@@ -2,13 +2,21 @@ import { Body, Controller, Get, Injectable, Patch, Post, Req, UseGuards } from '
 import { AuthGuard } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
 import { User } from './user.entity';
+import { GeocodingService } from '../geocoding/geocoding.service';
 
 class UpdateProfileDto {
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() city?: string;
   @IsOptional() @IsString() pushToken?: string;
+
+  // Rempli automatiquement si le téléphone du commerçant envoie le GPS
+  @IsOptional() @IsNumber() latitude?: number;
+  @IsOptional() @IsNumber() longitude?: number;
+
+  // Rempli si le commerçant tape son adresse à la main (GPS refusé)
+  @IsOptional() @IsString() addressText?: string;
 }
 
 class AddRoleDto {
@@ -21,13 +29,40 @@ class AddRoleDto {
 
 @Injectable()
 export class UsersService {
-  constructor(@InjectRepository(User) private users: Repository<User>) {}
+  constructor(
+    @InjectRepository(User) private users: Repository<User>,
+    private geocoding: GeocodingService,
+  ) {}
 
   findById(id: string) {
     return this.users.findOne({ where: { id } });
   }
 
   async updateProfile(id: string, dto: UpdateProfileDto) {
+    // Cas 1 : le téléphone a envoyé les coordonnées GPS directement
+    // → on les utilise telles quelles, pas besoin de géocodage.
+    if (dto.latitude !== undefined && dto.longitude !== undefined) {
+      await this.users.update({ id }, dto);
+      return this.findById(id);
+    }
+
+    // Cas 2 : une adresse tapée à la main est fournie, sans GPS
+    // → on la convertit en coordonnées via le service de géocodage.
+    if (dto.addressText) {
+      const coords = await this.geocoding.geocode(dto.addressText);
+      const updateData = { ...dto };
+      if (coords) {
+        updateData['latitude'] = coords.latitude;
+        updateData['longitude'] = coords.longitude;
+      }
+      // Si le géocodage échoue (adresse introuvable), on garde quand même le
+      // texte de l'adresse tapée, mais latitude/longitude restent vides pour
+      // l'instant — le commerçant pourra réessayer avec une adresse plus précise.
+      await this.users.update({ id }, updateData);
+      return this.findById(id);
+    }
+
+    // Cas 3 : aucun changement de position, mise à jour normale du profil
     await this.users.update({ id }, dto);
     return this.findById(id);
   }
@@ -64,4 +99,4 @@ export class UsersController {
   addRole(@Req() req: any, @Body() dto: AddRoleDto) {
     return this.users.addRole(req.user.userId, dto);
   }
-}
+    }
