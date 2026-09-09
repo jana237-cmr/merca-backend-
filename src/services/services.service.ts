@@ -6,7 +6,7 @@ import { Repository } from 'typeorm';
 import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
 import { Roles, RolesGuard } from '../auth/roles.guard';
 
-const BLOQUE_JOURS = 33;
+const BLOQUE_JOURS = 50;
 
 @Entity('services')
 export class ServiceEntity {
@@ -16,12 +16,13 @@ export class ServiceEntity {
   @Column('decimal', { precision: 12, scale: 2 }) price: number;
   @Column() domaine: string;
   @Column({ nullable: true }) description: string;
+  @Column({ nullable: true }) bureau: string;
   @Column({ default: true }) dispo: boolean;
   @Column({ nullable: true }) priceLockedUntil: Date;
   @CreateDateColumn() createdAt: Date;
 }
 
-class CreateServiceDto { @IsString() name: string; @IsNumber() @Min(1) price: number; @IsString() domaine: string; @IsOptional() @IsString() description?: string; }
+class CreateServiceDto { @IsString() name: string; @IsNumber() @Min(1) price: number; @IsString() domaine: string; @IsOptional() @IsString() description?: string; @IsOptional() @IsString() bureau?: string; }
 class UpdateServiceDto { @IsOptional() @IsNumber() @Min(1) price?: number; @IsOptional() dispo?: boolean; }
 
 @Injectable()
