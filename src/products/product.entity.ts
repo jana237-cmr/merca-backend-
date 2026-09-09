@@ -10,6 +10,9 @@ export class Product {
   @Column({ nullable: true }) category: string;
   @Column({ nullable: true }) city: string;
   @Column('text', { array: true, default: [] }) images: string[];
-  @Column({ nullable: true }) priceLockedUntil: Date; // règle des 33 jours, vérifiée côté serveur
+  @Column({ nullable: true }) priceLockedUntil: Date; // règle des 50 jours, vérifiée côté serveur
+  @Column({ nullable: true }) desc: string;
+  @Column({ nullable: true }) img: string;
+  @Column({ nullable: true }) shopName: string;
   @CreateDateColumn() createdAt: Date;
 }
