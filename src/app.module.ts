@@ -10,6 +10,8 @@ import { ProductsModule } from './products/products.module';
 import { ServicesModule } from './services/services.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { RatingsModule } from './ratings/ratings.module';
+import { SearchLogsModule } from './search-logs/search-logs.module';
 
 @Module({
   imports: [
@@ -35,6 +37,13 @@ import { ReviewsModule } from './reviews/reviews.module';
     OrdersModule,
     ProductsModule,
     ServicesModule,
+    BookingsModule,
+    ReviewsModule,
+    RatingsModule,
+    SearchLogsModule,
+  ],
+})
+export class AppModule {}    ServicesModule,
     BookingsModule,
     ReviewsModule,
   ],
