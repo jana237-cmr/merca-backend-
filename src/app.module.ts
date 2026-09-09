@@ -11,6 +11,7 @@ import { ServicesModule } from './services/services.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SearchLogsModule } from './search-logs/search-logs.module';
+import { GeocodingModule } from './geocoding/geocoding.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { SearchLogsModule } from './search-logs/search-logs.module';
     BookingsModule,
     ReviewsModule,
     SearchLogsModule,
+    GeocodingModule,
   ],
 })
 export class AppModule {}
