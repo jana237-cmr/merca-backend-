@@ -1,10 +1,12 @@
-import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Injectable, NotFoundException, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, Injectable, NotFoundException, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { AuthGuard } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { IsDateString, IsNumber, IsString, IsUUID, Min } from 'class-validator';
 import { WalletService } from '../wallet/wallet.service';
+import { User } from '../users/user.entity';
+import { sendPushNotification } from '../notifications/push.util';
 
 const FRAIS = 0.033;
 
@@ -88,22 +90,53 @@ export class BookingsService {
     b.status = 'Annulée';
     return this.bookings.save(b);
   }
+
+  // ---- Listes, selon qui regarde ----
+  listMine(clientId: string) {
+    return this.bookings.find({ where: { clientId }, order: { createdAt: 'DESC' } });
+  }
+  listToFulfill(proId: string) {
+    return this.bookings.find({ where: { proId }, order: { createdAt: 'DESC' } });
+  }
 }
 
 @Controller('bookings')
 @UseGuards(AuthGuard('jwt'))
 export class BookingsController {
-  constructor(private bookings: BookingsService) {}
+  constructor(
+    private bookings: BookingsService,
+    @InjectRepository(User) private users: Repository<User>,
+  ) {}
 
   @Post()
-  create(@Req() req: any, @Body() dto: CreateBookingDto) { return this.bookings.create(req.user.userId, dto); }
+  async create(@Req() req: any, @Body() dto: CreateBookingDto) {
+    const b = await this.bookings.create(req.user.userId, dto);
+    const pro = await this.users.findOne({ where: { id: dto.proId } });
+    if (pro?.pushToken) {
+      sendPushNotification(pro.pushToken, 'Nouvelle réservation MERCA 📅', `Une réservation de ${dto.servicePrice} FCFA vient d'arriver.`, { bookingId: b.id });
+    }
+    return b;
+  }
 
   @Post(':id/confirm')
-  confirm(@Req() req: any, @Param('id') id: string) { return this.bookings.confirm(id, req.user.userId); }
+  async confirm(@Req() req: any, @Param('id') id: string) {
+    const b = await this.bookings.confirm(id, req.user.userId);
+    const client = await this.users.findOne({ where: { id: b.clientId } });
+    if (client?.pushToken) {
+      sendPushNotification(client.pushToken, 'Réservation confirmée ✅', 'Ta réservation MERCA a été confirmée.', { bookingId: b.id });
+    }
+    return b;
+  }
 
   @Post(':id/complete')
   complete(@Req() req: any, @Param('id') id: string) { return this.bookings.complete(id, req.user.userId); }
 
   @Post(':id/cancel')
   cancel(@Req() req: any, @Param('id') id: string) { return this.bookings.cancel(id, req.user.userId); }
+
+  @Get('mine')
+  mine(@Req() req: any) { return this.bookings.listMine(req.user.userId); }
+
+  @Get('to-fulfill')
+  toFulfill(@Req() req: any) { return this.bookings.listToFulfill(req.user.userId); }
 }
