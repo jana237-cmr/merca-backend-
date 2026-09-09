@@ -36,8 +36,16 @@ export class OrdersController {
   }
 
   @Post(':id/advance')
-  advance(@Req() req: any, @Param('id') id: string) {
-    return this.orders.advance(id, req.user.userId, req.user.roles || []);
+  async advance(@Req() req: any, @Param('id') id: string) {
+    const order = await this.orders.advance(id, req.user.userId, req.user.roles || []);
+    if (order.step === 4) {
+      // La commande est "Livrée" - le client doit confirmer la réception
+      const buyer = await this.users.findOne({ where: { id: order.buyerId } });
+      if (buyer?.pushToken) {
+        sendPushNotification(buyer.pushToken, 'Commande livrée 📦', 'Ta commande est arrivée - confirme la réception dans MERCA.', { orderId: order.id });
+      }
+    }
+    return order;
   }
 
   @Post(':id/confirm')

@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order } from './order.entity';
+import { Product } from '../products/product.entity';
 import { WalletService } from '../wallet/wallet.service';
 
 // Règles économiques MERCA — copiées ici volontairement (et pas dans l'app)
@@ -19,6 +20,7 @@ const RULES = {
 export class OrdersService {
   constructor(
     @InjectRepository(Order) private orders: Repository<Order>,
+    @InjectRepository(Product) private products: Repository<Product>,
     private wallet: WalletService,
   ) {}
 
@@ -39,6 +41,14 @@ export class OrdersService {
     // requête (ex: mauvaise connexion), on ne crée pas deux commandes.
     const existing = await this.orders.findOne({ where: { idempotencyKey } });
     if (existing) return existing;
+
+    // Vérifie et diminue le stock du produit - c'est le SERVEUR qui décide,
+    // jamais l'app, pour éviter que deux clients achètent le dernier exemplaire en même temps.
+    const product = await this.products.findOne({ where: { id: productId } });
+    if (!product) throw new NotFoundException('Produit introuvable');
+    if (product.stock <= 0) throw new BadRequestException('Rupture de stock');
+    product.stock -= 1;
+    await this.products.save(product);
 
     const commission = Math.round(productPrice * RULES.FRAIS);
     const deliveryFee = delivery ? RULES.BASE : 0;
@@ -78,6 +88,8 @@ export class OrdersService {
     }
 
     order.step = Math.min(order.step + 1, 4);
+    const STEPS = ['Commande reçue', 'Préparation', 'Livreur recherché', 'En livraison', 'Livrée'];
+    order.status = STEPS[order.step];
     return this.orders.save(order);
   }
 
