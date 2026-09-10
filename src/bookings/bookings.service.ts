@@ -8,7 +8,7 @@ import { WalletService } from '../wallet/wallet.service';
 import { User } from '../users/user.entity';
 import { sendPushNotification } from '../notifications/push.util';
 
-const FRAIS = 0.033;
+const FRAIS = 0.20; // commission employé pro (services) : 20%
 
 @Entity('bookings')
 export class Booking {
