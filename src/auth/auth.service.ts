@@ -5,12 +5,7 @@ import { Repository } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Wallet } from '../wallet/wallet.entity';
 import { WalletTransaction } from '../wallet/wallet-transaction.entity';
-
-// Stockage temporaire des codes OTP (code à usage unique envoyé par SMS).
-// TODO PRODUCTION : remplacer cette Map en mémoire par Redis, sinon les
-// codes disparaissent à chaque redémarrage du serveur et ne fonctionnent
-// pas si tu as plusieurs serveurs en parallèle.
-const otpStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
+import { OtpCode } from './otp-code.entity';
 
 @Injectable()
 export class AuthService {
@@ -18,13 +13,20 @@ export class AuthService {
     @InjectRepository(User) private users: Repository<User>,
     @InjectRepository(Wallet) private wallets: Repository<Wallet>,
     @InjectRepository(WalletTransaction) private walletTx: Repository<WalletTransaction>,
+    @InjectRepository(OtpCode) private otpCodes: Repository<OtpCode>,
     private jwt: JwtService,
   ) {}
 
   // Étape 1 : le client demande un code, envoyé par SMS
   async requestOtp(phone: string) {
     const code = Math.floor(100000 + Math.random() * 900000).toString(); // 6 chiffres
-    otpStore.set(phone, { code, expiresAt: Date.now() + 5 * 60 * 1000, attempts: 0 });
+
+    // Stocké en base de données (et non plus en mémoire) : le code survit
+    // maintenant aux redémarrages/redéploiements du serveur.
+    await this.otpCodes.delete({ phone }); // supprime un éventuel ancien code pour ce numéro
+    await this.otpCodes.save(
+      this.otpCodes.create({ phone, code, expiresAt: new Date(Date.now() + 5 * 60 * 1000), attempts: 0 }),
+    );
 
     // TODO PRODUCTION : appeler ici un vrai fournisseur SMS (Twilio, ou un
     // agrégateur SMS local camerounais) pour envoyer `code` au numéro `phone`.
@@ -40,13 +42,17 @@ export class AuthService {
 
   // Étape 2 : le client renvoie le code reçu, on vérifie et on crée une session
   async verifyOtp(phone: string, code: string) {
-    const entry = otpStore.get(phone);
+    const entry = await this.otpCodes.findOne({ where: { phone } });
     if (!entry) throw new UnauthorizedException('Aucun code demandé pour ce numéro');
-    if (Date.now() > entry.expiresAt) { otpStore.delete(phone); throw new UnauthorizedException('Code expiré'); }
-    if (entry.attempts >= 3) { otpStore.delete(phone); throw new UnauthorizedException('Trop de tentatives, redemande un code'); }
-    if (entry.code !== code) { entry.attempts++; throw new UnauthorizedException('Code incorrect'); }
+    if (Date.now() > entry.expiresAt.getTime()) { await this.otpCodes.delete({ phone }); throw new UnauthorizedException('Code expiré'); }
+    if (entry.attempts >= 3) { await this.otpCodes.delete({ phone }); throw new UnauthorizedException('Trop de tentatives, redemande un code'); }
+    if (entry.code !== code) {
+      entry.attempts++;
+      await this.otpCodes.save(entry);
+      throw new UnauthorizedException('Code incorrect');
+    }
 
-    otpStore.delete(phone);
+    await this.otpCodes.delete({ phone });
 
     // Cherche un compte existant avec ce numéro, sinon en crée un nouveau
     let user = await this.users.findOne({ where: { phone } });
