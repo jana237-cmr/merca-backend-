@@ -8,7 +8,7 @@ import { WalletService } from '../wallet/wallet.service';
 // Règles économiques MERCA — copiées ici volontairement (et pas dans l'app)
 // car c'est le SERVEUR qui doit être la seule source de vérité sur l'argent.
 const RULES = {
-  FRAIS: 0.033,
+  FRAIS: 0.02, // commission commerçant (produits) : 2%
   BASE: 1500,
   SPLIT_LIVREUR: 600,
   SPLIT_MARCHAND: 450,
