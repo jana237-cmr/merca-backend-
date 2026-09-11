@@ -56,6 +56,7 @@ export class AuthService {
 
     // Cherche un compte existant avec ce numéro, sinon en crée un nouveau
     let user = await this.users.findOne({ where: { phone } });
+    if (user?.isSuspended) throw new UnauthorizedException('Ce compte a été suspendu. Contacte le support MERCA.');
     if (!user) {
       user = this.users.create({ phone, roles: ['client'] });
       await this.users.save(user);
