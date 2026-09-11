@@ -40,5 +40,9 @@ export class User {
   // une fois l'app construite en version finale.
   @Column({ nullable: true }) pushToken: string;
 
+  // ---- Administration MERCA (toi uniquement) ----
+  @Column({ default: false }) isAdmin: boolean;
+  @Column({ default: false }) isSuspended: boolean;
+
   @CreateDateColumn() createdAt: Date;
-                   }
+}
