@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Order } from './order.entity';
 import { Product } from '../products/product.entity';
 import { WalletService } from '../wallet/wallet.service';
+import { ReferralService } from '../referrals/referral.service';
 
 // Règles économiques MERCA — copiées ici volontairement (et pas dans l'app)
 // car c'est le SERVEUR qui doit être la seule source de vérité sur l'argent.
@@ -22,6 +23,7 @@ export class OrdersService {
     @InjectRepository(Order) private orders: Repository<Order>,
     @InjectRepository(Product) private products: Repository<Product>,
     private wallet: WalletService,
+    private referral: ReferralService,
   ) {}
 
   private async generateUniqueCode(): Promise<string> {
@@ -111,7 +113,9 @@ export class OrdersService {
 
     order.status = 'Confirmée';
     order.step = 4;
-    return this.orders.save(order);
+    await this.orders.save(order);
+    this.referral.rewardSponsorIfEligible(order.buyerId).catch(() => {}); // ne doit jamais bloquer la confirmation
+    return order;
   }
 
   // ---- Listes de commandes, selon qui regarde ----
