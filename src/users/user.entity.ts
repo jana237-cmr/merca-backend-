@@ -44,5 +44,10 @@ export class User {
   @Column({ default: false }) isAdmin: boolean;
   @Column({ default: false }) isSuspended: boolean;
 
+  // ---- MERCA CERCLE (parrainage) ----
+  @Column({ unique: true, nullable: true }) referralCode: string; // code personnel à partager
+  @Column({ nullable: true }) referredBy: string;                  // id du parrain, si inscrit via un code
+  @Column({ default: false }) referralRewarded: boolean;           // évite de récompenser 2 fois le même parrain
+
   @CreateDateColumn() createdAt: Date;
 }
