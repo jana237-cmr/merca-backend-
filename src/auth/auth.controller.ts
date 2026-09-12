@@ -1,9 +1,9 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { IsPhoneNumber, IsString, Length } from 'class-validator';
+import { IsOptional, IsPhoneNumber, IsString, Length } from 'class-validator';
 import { AuthService } from './auth.service';
 
 class RequestOtpDto { @IsPhoneNumber() phone: string; } // accepte tous les pays (le numéro doit commencer par + et son indicatif)
-class VerifyOtpDto { @IsPhoneNumber() phone: string; @IsString() @Length(6, 6) code: string; }
+class VerifyOtpDto { @IsPhoneNumber() phone: string; @IsString() @Length(6, 6) code: string; @IsOptional() @IsString() referralCode?: string; }
 
 // Uniformise le format du numéro avant toute recherche/création en base -
 // évite qu'un même numéro tapé différemment (espaces, tirets) crée 2 comptes distincts.
@@ -22,6 +22,6 @@ export class AuthController {
 
   @Post('verify')
   verify(@Body() dto: VerifyOtpDto) {
-    return this.auth.verifyOtp(normalizePhone(dto.phone), dto.code);
+    return this.auth.verifyOtp(normalizePhone(dto.phone), dto.code, dto.referralCode);
   }
 }

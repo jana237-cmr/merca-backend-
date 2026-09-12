@@ -41,7 +41,7 @@ export class AuthService {
   }
 
   // Étape 2 : le client renvoie le code reçu, on vérifie et on crée une session
-  async verifyOtp(phone: string, code: string) {
+  async verifyOtp(phone: string, code: string, referralCode?: string) {
     const entry = await this.otpCodes.findOne({ where: { phone } });
     if (!entry) throw new UnauthorizedException('Aucun code demandé pour ce numéro');
     if (Date.now() > entry.expiresAt.getTime()) { await this.otpCodes.delete({ phone }); throw new UnauthorizedException('Code expiré'); }
@@ -58,7 +58,21 @@ export class AuthService {
     let user = await this.users.findOne({ where: { phone } });
     if (user?.isSuspended) throw new UnauthorizedException('Ce compte a été suspendu. Contacte le support MERCA.');
     if (!user) {
-      user = this.users.create({ phone, roles: ['client'] });
+      // MERCA CERCLE : génère un code personnel unique à partager (parrainage)
+      let myCode: string;
+      do { myCode = Math.random().toString(36).slice(2, 8).toUpperCase(); }
+      while (await this.users.findOne({ where: { referralCode: myCode } }));
+
+      // Si un code de parrain valide est fourni, on le lie (la récompense
+      // n'est donnée que plus tard, à la première vraie transaction confirmée -
+      // voir OrdersService/BookingsService - pour éviter les faux comptes).
+      let referredBy: string | undefined;
+      if (referralCode) {
+        const sponsor = await this.users.findOne({ where: { referralCode } });
+        if (sponsor) referredBy = sponsor.id;
+      }
+
+      user = this.users.create({ phone, roles: ['client'], referralCode: myCode, referredBy });
       await this.users.save(user);
 
       // Nouveau compte : on crée son portefeuille (wallet) tout de suite,
