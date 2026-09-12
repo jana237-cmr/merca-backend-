@@ -7,6 +7,7 @@ import { IsDateString, IsNumber, IsString, IsUUID, Min } from 'class-validator';
 import { WalletService } from '../wallet/wallet.service';
 import { User } from '../users/user.entity';
 import { sendPushNotification } from '../notifications/push.util';
+import { ReferralService } from '../referrals/referral.service';
 
 const FRAIS = 0.20; // commission employé pro (services) : 20%
 
@@ -38,6 +39,7 @@ export class BookingsService {
   constructor(
     @InjectRepository(Booking) private bookings: Repository<Booking>,
     private wallet: WalletService,
+    private referral: ReferralService,
   ) {}
 
   private async genCode(): Promise<string> {
@@ -78,7 +80,9 @@ export class BookingsService {
     if (b.status !== 'Confirmée') throw new BadRequestException('La réservation doit être confirmée avant');
     await this.wallet.credit(proId, Number(b.price), 'payout', `payout-booking-${b.id}`, b.id);
     b.status = 'Terminée';
-    return this.bookings.save(b);
+    await this.bookings.save(b);
+    this.referral.rewardSponsorIfEligible(b.clientId).catch(() => {});
+    return b;
   }
 
   async cancel(id: string, clientId: string) {
