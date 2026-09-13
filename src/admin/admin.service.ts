@@ -26,9 +26,9 @@ class AdminGuard implements CanActivate {
     // .trim() des deux côtés : un espace ou retour à la ligne accidentel
     // (fréquent en copiant-collant une valeur dans un formulaire) ne doit
     // jamais bloquer silencieusement l'accès sans qu'on comprenne pourquoi.
-    const configured = process.env.ADMIN_PASSWORD?.trim();
+    const configured = process.env.MERCA_ADMIN_SECRET?.trim();
     if (!configured) {
-      throw new ForbiddenException("La variable ADMIN_PASSWORD n'est pas configurée sur le serveur (pas encore ajoutée, ou le service n'a pas redémarré depuis)");
+      throw new ForbiddenException("La variable MERCA_ADMIN_SECRET n'est pas configurée sur le serveur (pas encore ajoutée, ou le service n'a pas redémarré depuis)");
     }
     const provided = (req.headers['x-admin-password'] || '').toString().trim();
     if (provided !== configured) throw new ForbiddenException('Mot de passe administrateur incorrect');
