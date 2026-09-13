@@ -4,10 +4,12 @@ import { User } from '../users/user.entity';
 import { Order } from '../orders/order.entity';
 import { Booking } from '../bookings/bookings.service';
 import { Product } from '../products/product.entity';
+import { Wallet } from '../wallet/wallet.entity';
+import { WalletModule } from '../wallet/wallet.module';
 import { AdminController } from './admin.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Order, Booking, Product])],
+  imports: [TypeOrmModule.forFeature([User, Order, Booking, Product, Wallet]), WalletModule],
   controllers: [AdminController],
 })
 export class AdminModule {}
