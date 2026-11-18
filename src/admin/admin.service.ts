@@ -17,7 +17,7 @@ import { WalletService } from '../wallet/wallet.service';
 // du compte lui-même - même si quelqu'un a accès à ton téléphone déverrouillé,
 // il ne peut pas ouvrir l'administration sans connaître ce mot de passe.
 @Injectable()
-class AdminGuard implements CanActivate {
+export class AdminGuard implements CanActivate {
   constructor(@InjectRepository(User) private users: Repository<User>) {}
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
