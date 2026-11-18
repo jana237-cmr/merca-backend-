@@ -13,6 +13,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { SearchLogsModule } from './search-logs/search-logs.module';
 import { GeocodingModule } from './geocoding/geocoding.module';
 import { AdminModule } from './admin/admin.module';
+import { SupportModule } from './support/support.module';
 
 @Module({
   imports: [
@@ -38,3 +39,4 @@ import { AdminModule } from './admin/admin.module';
   ],
 })
 export class AppModule {}
+SupportModule,
