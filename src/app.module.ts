@@ -36,7 +36,7 @@ import { SupportModule } from './support/support.module';
     SearchLogsModule,
     GeocodingModule,
     AdminModule,
+    SupportModule,
   ],
 })
 export class AppModule {}
-SupportModule,
