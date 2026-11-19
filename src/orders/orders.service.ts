@@ -44,31 +44,53 @@ export class OrdersService {
     const existing = await this.orders.findOne({ where: { idempotencyKey } });
     if (existing) return existing;
 
-    // Vérifie et diminue le stock du produit - c'est le SERVEUR qui décide,
-    // jamais l'app, pour éviter que deux clients achètent le dernier exemplaire en même temps.
-    const product = await this.products.findOne({ where: { id: productId } });
-    if (!product) throw new NotFoundException('Produit introuvable');
-    if (product.stock <= 0) throw new BadRequestException('Rupture de stock');
-    product.stock -= 1;
-    await this.products.save(product);
+    // Diminue le stock de façon ATOMIQUE, en une seule instruction SQL
+    // conditionnelle ("stock > 0"), directement en base. Avant, le code
+    // lisait le stock puis l'écrivait en deux étapes séparées : si deux
+    // clients commandaient le TOUT DERNIER exemplaire exactement au même
+    // instant, les deux pouvaient passer la vérification avant que l'un des
+    // deux n'ait sauvegardé - et les deux commandes étaient créées pour un
+    // seul article réellement disponible. Avec une seule instruction SQL,
+    // la base de données ne peut matériellement pas laisser passer les deux.
+    const stockResult = await this.orders.query(
+      `update products set stock = stock - 1 where id = $1 and stock > 0 returning stock`,
+      [productId],
+    );
+    if (stockResult.length === 0) {
+      const product = await this.products.findOne({ where: { id: productId } });
+      if (!product) throw new NotFoundException('Produit introuvable');
+      throw new BadRequestException('Rupture de stock');
+    }
 
     const commission = Math.round(productPrice * RULES.FRAIS);
     const deliveryFee = delivery ? RULES.BASE : 0;
     const total = productPrice + commission + deliveryFee;
     const deliveryCode = await this.generateUniqueCode();
 
-    // Débite le portefeuille AVANT de créer la commande. Si le solde est
-    // insuffisant, debit() lève une erreur et aucune commande n'est créée.
-    await this.wallet.debit(buyerId, total, 'order', idempotencyKey);
+    try {
+      // Débite le portefeuille AVANT de créer la commande. Si le solde est
+      // insuffisant, debit() lève une erreur et aucune commande n'est créée.
+      await this.wallet.debit(buyerId, total, 'order', idempotencyKey);
 
-    const order = this.orders.create({
-      buyerId, productId, merchantId, price: productPrice, commission,
-      deliveryFee, splitCourier: delivery ? RULES.SPLIT_LIVREUR : 0,
-      splitMerchant: delivery ? RULES.SPLIT_MARCHAND : 0,
-      splitMerca: delivery ? RULES.SPLIT_MERCA : 0,
-      total, deliveryCode, idempotencyKey,
-    });
-    return this.orders.save(order);
+      const order = this.orders.create({
+        buyerId, productId, merchantId, price: productPrice, commission,
+        deliveryFee, splitCourier: delivery ? RULES.SPLIT_LIVREUR : 0,
+        splitMerchant: delivery ? RULES.SPLIT_MARCHAND : 0,
+        splitMerca: delivery ? RULES.SPLIT_MERCA : 0,
+        total, deliveryCode, idempotencyKey,
+      });
+      return await this.orders.save(order);
+    } catch (e) {
+      // Si on arrive ici, la commande n'a PAS pu être créée (solde
+      // insuffisant, ou une requête jumelle avec la même clé a été traitée
+      // exactement en même temps). Dans tous les cas, on rend le stock
+      // qu'on venait de retirer, pour ne jamais perdre un article en stock
+      // à cause d'une commande qui n'a finalement pas abouti.
+      await this.orders.query(`update products set stock = stock + 1 where id = $1`, [productId]);
+      const concurrent = await this.orders.findOne({ where: { idempotencyKey } });
+      if (concurrent) return concurrent; // une requête jumelle a bien créé la commande entre-temps
+      throw e;
+    }
   }
 
   // Qui a le droit de faire avancer une commande, selon l'étape où elle est :
