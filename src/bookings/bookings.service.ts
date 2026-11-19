@@ -58,10 +58,18 @@ export class BookingsService {
     const total = dto.servicePrice + commission;
     const bookingCode = await this.genCode();
 
-    await this.wallet.debit(clientId, total, 'booking', dto.idempotencyKey);
-
-    const b = this.bookings.create({ clientId, serviceId: dto.serviceId, proId: dto.proId, slotAt: new Date(dto.slotAt), price: dto.servicePrice, commission, total, bookingCode, idempotencyKey: dto.idempotencyKey });
-    return this.bookings.save(b);
+    try {
+      await this.wallet.debit(clientId, total, 'booking', dto.idempotencyKey);
+      const b = this.bookings.create({ clientId, serviceId: dto.serviceId, proId: dto.proId, slotAt: new Date(dto.slotAt), price: dto.servicePrice, commission, total, bookingCode, idempotencyKey: dto.idempotencyKey });
+      return await this.bookings.save(b);
+    } catch (e) {
+      // Une requête jumelle avec la même clé anti-doublon a pu être traitée
+      // exactement au même instant : on renvoie sa réservation au lieu de
+      // planter, plutôt que de risquer une erreur confuse pour le client.
+      const concurrent = await this.bookings.findOne({ where: { idempotencyKey: dto.idempotencyKey } });
+      if (concurrent) return concurrent;
+      throw e;
+    }
   }
 
   async confirm(id: string, proId: string) {
@@ -143,4 +151,4 @@ export class BookingsController {
 
   @Get('to-fulfill')
   toFulfill(@Req() req: any) { return this.bookings.listToFulfill(req.user.userId); }
-}
+  }
